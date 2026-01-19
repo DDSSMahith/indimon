@@ -1,5 +1,5 @@
-import random
 from utils.type_chart import type_multiplier
+import random
 
 LEVEL = 50
 
@@ -15,7 +15,7 @@ class Battle:
             return 0
 
         if random.randint(1, 100) > move.accuracy:
-            return 0  # miss
+            return 0
 
         if move.category == "Physical":
             attack = attacker.stats["attack"]
@@ -24,14 +24,11 @@ class Battle:
             attack = attacker.stats["sp_attack"]
             defense = defender.stats["sp_defense"]
 
-        base_damage = (
-            ((2 * LEVEL / 5 + 2) * move.power * (attack / defense)) / 50
-        ) + 2
+        base = ((2 * LEVEL / 5 + 2) * move.power * (attack / defense)) / 50 + 2
+        stab = 1.5 if move.type.lower() in [t.lower() for t in attacker.types] else 1.0
+        mult = type_multiplier(move.type, defender.types)
 
-        multiplier = type_multiplier(move.type, defender.types)
-        stab = 1.5 if move.type in attacker.types else 1.0
-
-        return int(base_damage * multiplier * stab)
+        return int(base * stab * mult)
 
     def execute_turn(self, player_move, ai_move):
         first, first_move, second, second_move = (
@@ -46,3 +43,18 @@ class Battle:
         if second.is_alive():
             damage = self.calculate_damage(second, first, second_move)
             first.take_damage(damage)
+
+        return self.check_faint()
+
+    def check_faint(self):
+        if self.player_active.fainted:
+            if self.player_team.has_alive():
+                return "player_faint"
+            return "player_lost"
+
+        if self.ai_active.fainted:
+            if self.ai_team.has_alive():
+                return "ai_faint"
+            return "ai_lost"
+
+        return None
